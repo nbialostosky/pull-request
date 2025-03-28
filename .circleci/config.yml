@@ -1,22 +1,26 @@
 version: 2.1
 
+orbs:
+  jq: circleci/jq@3.0.2
+  
 jobs:
-  hello-job:
+  myjob:
     docker:
-      - image: cimg/node:17.2.0 # the primary container, where your job's commands are run
+      - image: cimg/node:17.9.1
     steps:
-      - checkout # check out the code in the project directory
-      - run: echo "hello world" # run the `echo` command
-
+      - checkout
+      - jq/install
+      - run: << pipeline.trigger_parameters.webhook.body >> | sed 's/\\"/"/g' | jq '.action'
+      - run:
+          name: "Print event action (1)"
+          environment:
+            EVENT_ACTION: << pipeline.trigger_parameters.webhook.body >> | sed 's/\\"/"/g' | jq '.action'
+          command: echo "$EVENT_ACTION"
+      # - run:
+      #     name: "Print event action (2)"
+      #     command: echo << pipeline.trigger_parameters.webhook.body >> | jq '.payload.action'
+      
 workflows:
-  all-pushes:
+  do_some_stuff:
     jobs:
-      - hello-job
-  all-pushes-tag:
-    jobs:
-      - hello-job:
-          filters:
-            tags:
-              only: /^v.*/
-            branches:
-              ignore: /.*/
+      - myjob
